@@ -1,0 +1,17 @@
+---
+abstract: 'Process TAL templates with Perl'
+author:
+  - 'Tom Insam / Fotango'
+configure_requires:
+  Module::Build: 0.36
+dynamic_config: 0
+generated_by: 'Module::Build version 0.3607'
+license: perl
+name: Template-TAL
+requires:
+  Test::More: 0
+  Test::XML: 0
+  UNIVERSAL::require: 0
+  XML::LibXML: 0
+  perl: 5.008
+version: 0.91

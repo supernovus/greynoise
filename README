@@ -1,0 +1,43 @@
+GreyNoise » WhiteNoise for Perl 5.
+==================================
+
+What is it?
+
+An implementation of the WhiteNoise static website
+generation system, but in Perl 5 instead of Perl 6.
+
+While I've used Petal in previous Perl 5 engines,
+I'm using Template::TAL for this one.
+
+Actually, I'm using my own fork of Template::TAL,
+which is included in the source tree (although
+I'll probably give it its own home eventually.)
+
+Why Perl 5?
+
+Because the only "usable" implementation of Perl 6 is 
+way too slow and buggy. It took about ten minutes to
+build a few static pages, and then crashed before
+writing the indexes. Screw that.
+
+Why Template::TAL instead of Petal?
+
+The code-base makes more sense to me. And it was closer to
+the Flower implementation than Petal was.
+
+Why fork Template::TAL?
+
+I wanted to add some core functionality, and Template::TAL
+hasn't been actively developed since 2007. So, my fork was
+born. If the original authors of Template::TAL are interested
+in my changes, feel free to merge them back. If on the other hand
+they hate the changes, I'll rename my fork to something else.
+
+What's next?
+
+Not a clue. Add more functionality?
+
+The long term future is a return to WhiteNoise in Perl 6,
+and eventually, a return to Webtoo Websight 6. However,
+I don't see that happening in the near future.
+

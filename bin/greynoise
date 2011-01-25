@@ -1,0 +1,45 @@
+#!/usr/bin/perl
+
+use local::lib "~/.greynoise";
+use v5.10;
+use Slurp;
+use GreyNoise;
+
+## The interface for greynoise is different than that of whitenoise.
+## Instead of having properly parsed command line arguments, we're using
+## a faked syntax instead.
+
+if (@ARGV < 3) {
+  die "usage: $0 <--command> <config file> <what-to-build>"
+}
+
+my ($command, $config, $build) = @ARGV;
+
+my $greynoise = GreyNoise->new($config);
+
+given ($command) {
+  when '--page' {
+    $greynoise->add_page($build);
+  }
+  when '--list' {
+    my @pages = slurp($build);
+    for my $page in (@pages) {
+      $greynoise->add_page($page);
+    }
+  }
+  ## TODO: '--dir' support.
+  when '--index' {
+    $greynoise->regenerate($build);
+  }
+  when '--story' {
+    $greynoise->regenerate($build);
+  }
+  when '--regenerate' {
+    $greynoise->regenerate();
+  }
+}
+
+$greynoise->generate();
+
+## That's all folks.
+
