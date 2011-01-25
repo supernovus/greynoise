@@ -25,6 +25,10 @@ Why Template::TAL instead of Petal?
 The code-base makes more sense to me. And it was closer to
 the Flower implementation than Petal was.
 
+Actually, there are parts of it that are so cool, that I am
+planning on making Flower work more like it (such as how
+"languages" are handled, that is just awesome.)
+
 Why fork Template::TAL?
 
 I wanted to add some core functionality, and Template::TAL
@@ -32,6 +36,18 @@ hasn't been actively developed since 2007. So, my fork was
 born. If the original authors of Template::TAL are interested
 in my changes, feel free to merge them back. If on the other hand
 they hate the changes, I'll rename my fork to something else.
+
+What is DateTime::Parse::Perl6?
+
+It's exactly what it sounds like, it's a parser for
+DateTime objects, that parses Perl 6 DateTime strings
+(which is an ISO8601 style string) and also formats
+them as Perl 6 would.
+
+It's derived from the DateTime::Format::RFC3339 library,
+but modified to work with Perl 6 strings specifically.
+
+Eventually, it'll probably make its way into its own repository.
 
 What's next?
 

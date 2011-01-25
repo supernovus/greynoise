@@ -1,0 +1,32 @@
+DateTime-Format-Perl6
+
+DateTime::Format::Perl6 parses and formats Perl6-style
+datetime strings.
+
+INSTALLATION
+
+To install this module, run the following commands:
+
+    perl Makefile.PL
+    make 
+    make test 
+    make install
+
+DEPENDENCIES
+
+This module requires these other modules and libraries:
+
+    DateTime
+    Test::More 
+    version
+
+SUPPORT AND DOCUMENTATION
+
+After installing, you can find documentation for this module with the
+perldoc command.
+
+    perldoc DateTime::Format::Perl6
+
+COPYRIGHT AND LICENCE
+
+Public domain. No rights reserved.

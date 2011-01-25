@@ -1,0 +1,5 @@
+Revision history for DateTime-Format-Perl6
+
+1.0.0   2011-01-25
+        Started project, a fork of DateTime-Format-RFC3339.
+
