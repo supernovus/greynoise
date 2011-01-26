@@ -61,7 +61,6 @@ Eventually, it'll probably make its way into its own repository.
  * Perl 5.10 or higher.
  * File::Find::Rule
  * Slurp
- * local::lib
  * DateTime
  * JSON == 2.0 or higher (JSON::XS is also highly recommended.)
  * XML::LibXML

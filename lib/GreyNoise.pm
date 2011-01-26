@@ -224,8 +224,33 @@ sub get_datetime {
   return $dt;
 }
 
- 
+sub add_to_list {
+  my ($self, $page, $tag, $story) = @_;
+  my $cachefile;
+  if ($story) {
+    $cachefile = $self->story_cache($story);
+  }
+  else {
+    $cachfile = $self->index_cache($tag);
+  }
+  my $cache = $self->load_cache($cachefile);
+  my $pagelink = $self->page_path($page);
+  my $pagedata = $page->{data};
 
+  my $updated;
+  if (exists $pagedata->{updated}) {
+    $updated = $self->get_datetime($pagedata->{updated});
+  }
+  elsif (exists $pagedata->{changelog}) {
+    my $newest = $pagedata->{changelog}->[0]->{date};
+    $updated = $self->get_datetime($newest);
+  }
+  elsif (exists $pagedata->{items}) {
+    my $pageitems = $pagedata->{items};
+    my $lastitem  = $pageitems->[-1];
+  }
+  ### WE ARE HERE
+}
 #####################
 1; # End of library #
    ##################
