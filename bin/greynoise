@@ -1,40 +1,65 @@
 #!/usr/bin/perl
 
+use strict;
+use warnings;
 use local::lib "~/.greynoise";
 use v5.10;
 use Slurp;
 use GreyNoise;
+use File::Basename;
+use File::Find::Rule;
 
-## The interface for greynoise is different than that of whitenoise.
+## The CLI interface for greynoise is different than that of whitenoise.
 ## Instead of having properly parsed command line arguments, we're using
-## a faked syntax instead.
+## 'command flags' instead. Not as nice, but it works.
 
-if (@ARGV < 3) {
-  die "usage: $0 <--command> <config file> <what-to-build>"
+sub usage {
+  my $app = basename($0);
+  say "usage: $app --page <config> <page-file>";
+  say "or:    $app --list <config> <list-file>";
+  say "or:    $app --dir  <config> <directory>";
+  say "or:    $app --index <config> <index-cache-file>";
+  say "or:    $app --story <config> <story-cache-file>";
+  say "or:    $app --regenerate <config>";
+  exit 1;
+}
+
+if (@ARGV < 2) {
+  usage();
 }
 
 my ($command, $config, $build) = @ARGV;
 
+if ($command ne '--regenerate' && !$build) {
+  usage();
+}
+
 my $greynoise = GreyNoise->new($config);
 
 given ($command) {
-  when '--page' {
+  when ('--page') {
     $greynoise->add_page($build);
   }
-  when '--list' {
+  when ('--list') {
     my @pages = slurp($build);
-    for my $page in (@pages) {
+    for my $page (@pages) {
       $greynoise->add_page($page);
     }
   }
-  ## TODO: '--dir' support.
-  when '--index' {
+  when ('--dir') {
+    my @pages = File::Find::Rule->file->name('*.xml')->in($build);
+    for my $page (@pages) {
+      say "Adding $page";
+      $greynoise->add_page($page);
+    }
+  }
+  when ('--index') {
     $greynoise->regenerate($build);
   }
-  when '--story' {
+  when ('--story') {
     $greynoise->regenerate($build);
   }
-  when '--regenerate' {
+  when ('--regenerate') {
     $greynoise->regenerate();
   }
 }

@@ -9,6 +9,8 @@ package GreyNoise;
 ### as well as the sole distribution of DateTime::Format::Perl6
 ### are included in the "contrib" folder. They are requirements.
 
+use strict;
+use warnings;
 use v5.10;         ## I like Perl 5.10+
 use JSON 2.0;      ## must have 2.0 or higher.
 use Template::TAL; ## A TAL/METAL implementation.
@@ -33,14 +35,14 @@ sub pretty_json {
 sub new {
   my $class = shift;
   my $config = shift;
-  if (!-f $config) { die "config file '$file' not found"; }
+  if (!-f $config) { die "config file '$config' not found"; }
   my $conf = decode_json(slurp($config));
   my $tal  = Template::TAL->new( 
-    include_path => $conf{templates}{dir},
+    include_path => $conf->{templates}->{dir},
     output       => 'Template::TAL::Output::XML',
   );
-  if ($conf{templates}{plugins}) { ## Template plugins.
-    for my $plugin (@{$conf{plugins}}) {
+  if ($conf->{templates}->{plugins}) { ## Template plugins.
+    for my $plugin (@{$conf->{plugins}}) {
       require $plugin;
       $tal->add_language($plugin);
     }
@@ -162,6 +164,7 @@ sub save_cache {
 }
 
 sub save_caches {
+  my $self = shift;
   while (my ($file, $data) = each %{$self->{cache}->{cache}}) {
     my $text = json_encode($data); # caches don't need pretty.
     $self->output_file($file, $text);
@@ -191,7 +194,7 @@ sub get_datetime {
   }
   my $dt;
   if ($updated =~ /^\d+$/) { ## If we are an integer, assume Epoch value.
-    $dt = DateTime.from_epoch( 
+    $dt = DateTime->from_epoch( 
       epoch => $updated, 
       time_zone => 'local', 
       formatter => DateTime::Format::Perl6->new()
