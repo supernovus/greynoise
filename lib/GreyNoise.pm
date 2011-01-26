@@ -2,7 +2,23 @@
 # GreyNoise: WhiteNoise for Perl 5   #
 ######################################
 
+=head1 NAME
+
+GreyNoise - A static website generator based on WhiteNoise
+
+=head1 SYNOPSIS
+
+  $ greynoise --page ./site-config.json ./pages/my-page.xml
+
+=head1 DESCRIPTION
+
+See the README, I haven't ported it into the POD docs yet.
+
+=cut
+
 package GreyNoise;
+
+our $VERSION = "0.01";
 
 ### NOTE:
 ### A custom version of Template::TAL,

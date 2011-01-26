@@ -9,7 +9,7 @@ Module::Build->new(
     module_name => 'GreyNoise',
     license => 'perl',
     requires => {
-      'perl' => '5.10', # unicode.
+      'perl' => '5.010', # We use 5.10 specific features.
       'XML::LibXML' => 0,
       'Test::More' => 0,
       'Test::XML' => 0,
