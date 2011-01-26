@@ -1,2 +1,7 @@
 *.swp
 *.bak
+MANIFEST*
+Build
+MYMETA.yml
+_build
+blib
