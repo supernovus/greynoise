@@ -212,9 +212,9 @@ sub get_datetime {
   if ($updated =~ /^\d+$/) { ## If we are an integer, assume Epoch value.
     $dt = DateTime->from_epoch( 
       epoch => $updated, 
-      time_zone => 'local', 
       formatter => DateTime::Format::Perl6->new()
     );
+    $dt->set_time_zone('local'); ## Move into local-time AFTER parsing.
   }
   else {
     my $parser = DateTime::Format::Perl6->new();
@@ -248,8 +248,73 @@ sub add_to_list {
   elsif (exists $pagedata->{items}) {
     my $pageitems = $pagedata->{items};
     my $lastitem  = $pageitems->[-1];
+    my $lastdate  = $lastitem->{updated};
+    $updated = $self->get_datetime($lastdate);
   }
-  ### WE ARE HERE
+  else {
+    $updated = DateTime->now();
+    $updated->set_time_zone('local');
+    $self->{cache}->{date}->{"$updated"} = $updated;
+  }
+
+  my $snippet = $page->{xml}->getElementById('snippet');
+  if (!$snippet) {
+    $snippet = $page->{xml}->documentElement->firstChild;
+  }
+
+  my $type = 'article';
+  if (exists $page->{type}) {
+    $type = $page->{type};
+  }
+
+  my $pagedef = {
+    'type'      => $type,
+    'file'      => $page->{file},
+    'link'      => $pagelink,
+    'title'     => $pagedata->{title},
+    'updated'   => "$updated",
+    'snippet'   => $snippet->toString(),
+  };
+
+  ## Lets add any tag links.
+  if (exists $pagedata->{tags}) {
+    my @tags;
+    for my $pagetag (@{$pagedata->{tags}}) {
+      my $taglink = $self->index_path(1, $pagetag);
+      my $tagdef = {
+        'name'  => $pagetag,
+        'link'  => $taglink,
+      };
+      push(@tags, $tagdef);
+      $pagedef->{tags} = \@tags;
+    }
+  }
+
+  ## Add a chapter number, if it exists.
+  if (exists $pagedata->{chapter}) {
+    $pagedef->{chapter} = $pagedata->{chapter};
+  }
+
+  ## Special fields to index.
+  if (exists $pagedata->{index}) {
+    for my $section (@{$pagedata->{index}}) {
+      if ($section ~= /(link|title|updated|snippet|tags|content)/) {
+        next; ## Skip non-overridable sections.
+      }
+      if (exists $pagedata->{$section}) {
+        $pagedef->{$section} = $pagedata->{$section};
+      }
+    }
+  }
+
+  my $added = 0;
+  my $smartlist = 1;
+  if (exists $self->{conf}->{smartlist}) {
+    $smartlist = $self->{conf}->{smartlist};
+  }
+
+##### WE ARE HERE!
+
 }
 #####################
 1; # End of library #
