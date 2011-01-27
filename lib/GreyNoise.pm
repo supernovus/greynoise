@@ -59,7 +59,6 @@ sub new {
   );
   if ($conf->{templates}->{plugins}) { ## Template plugins.
     for my $plugin (@{$conf->{plugins}}) {
-      require $plugin;
       $tal->add_language($plugin);
     }
   }
