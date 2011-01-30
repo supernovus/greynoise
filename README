@@ -8,7 +8,9 @@ generation system, but in Perl 5 instead of Perl 6.
 
 For templates, I'm using my own fork of Template::TAL,
 which is included in the source tree (although
-I'll probably give it its own home eventually.)
+I'll probably give it its own home, and see about
+submitting the new version to CPAN, but that can
+wait for another day.)
 
 == Why Perl 5? ==
 
@@ -54,7 +56,8 @@ them as Perl 6 would.
 It's derived from the DateTime::Format::RFC3339 library,
 but modified to work with Perl 6 strings specifically.
 
-Eventually, it'll probably make its way into its own repository.
+Eventually, it'll probably make its way into its own repository,
+and onto CPAN.
 
 == What other dependencies are there? == 
 
@@ -79,6 +82,10 @@ Not a clue. Add more functionality?
 The long term future is a return to WhiteNoise in Perl 6,
 and eventually, a return to Webtoo Websight 6. However,
 I don't see that happening in the near future.
+
+When I do return, I'm overhauling Flower to be more like
+Template::TAL, and extending Exemel to support an optional DOM-like
+interface similar to the one used by XML::LibXML.
 
 The day the current version of 'whitenoise' runs even
 half the speed of 'greynoise', and doesn't crash, is the

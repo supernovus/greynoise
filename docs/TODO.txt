@@ -1,0 +1,5 @@
+- Add GreyNoise::Template::DateTime, a port of Flower::Utils::Date.
+- Add a plugin for References. 
+  Either a page plugin like WhiteNoise uses,
+  or a Template::TAL powered plugin. Either works.
+- Add some tests.
