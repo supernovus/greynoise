@@ -241,8 +241,9 @@ sub process {
 #
 # this method is private because it shouldn't be exposed to the user,
 # but the TAL language module calls it, so it's not 'properly' private.
+# Added ability to process only specific languages and tags. --supernovus.
 sub _process_node {
-  my ($self, $node, $local_context, $global_context) = @_;
+  my ($self, $node, $local_context, $global_context, $filters, $lid) = @_;
 
   # we only care about handling elements - text nodes, etc, don't have
   # attributes and therefore can't be munged.
@@ -281,10 +282,16 @@ sub _process_node {
   LANGUAGE: for my $language ( @{ $self->languages } ) {
     # only process if the language is referenced.
     next unless $language->namespace and exists $attrs{ $language->namespace };
+    if ($filters) {
+      next unless exists $filters->{$language->namespace};
+    }
 
     # the languages have an ordered list of tag types they want to deal with.
     OPS: for my $type ($language->tags) {
       next unless exists $attrs{ $language->namespace }{ $type };
+      if ($filters) {
+        next unless exists $filters->{$language->namespace}->{$type};
+      }
 
       # remove this attribute from the node first, recursive processing
       # wants to see all _other_ attributes, but not the one that caused
@@ -295,7 +302,7 @@ sub _process_node {
       my $sub = "process_tag_$type"; $sub =~ s/\-/_/;
       Carp::croak("language module $language can't handle nodes of type '$type', as claimed")
         unless $language->can($sub);
-      my @replace = $language->$sub($self, $node, $attrs{ $language->namespace }{ $type }, $local_context, $global_context);
+      my @replace = $language->$sub($self, $node, $attrs{ $language->namespace }{ $type }, $local_context, $global_context, $lid);
   
       # remove from the todo list, so we can track unhandled attributes later.
       delete $attrs{ $language->namespace }{ $type };

@@ -34,6 +34,12 @@ use DateTime;      ## Dates for changelogs, etc.
 use Slurp;         ## Just quick and simple.
 use XML::LibXML;   ## Used for pages and page templates.
 use Carp;          ## Useful for some functions.
+use POSIX;         ## We're using ceil().
+
+use UNIVERSAL::require; ## A quick way to load plugins.
+
+use File::Basename;            ## Better than get-filename from WhiteNoise.
+use File::Path qw(make_path);  ## make_path is useful.
 
 use DateTime::Format::Perl6; ## Parser and Formatter for DateTime objects.
 
@@ -54,7 +60,7 @@ sub new {
   if (!-f $config) { die "config file '$config' not found"; }
   my $conf = decode_json(slurp($config));
   my $tal  = Template::TAL->new( 
-    include_path => $conf->{templates}->{dir},
+    include_path => $conf->{templates}->{folder},
     output       => 'Template::TAL::Output::XML',
   );
   if ($conf->{templates}->{plugins}) { ## Template plugins.
@@ -230,7 +236,7 @@ sub add_to_list {
     $cachefile = $self->story_cache($story);
   }
   else {
-    $cachfile = $self->index_cache($tag);
+    $cachefile = $self->index_cache($tag);
   }
   my $cache = $self->load_cache($cachefile);
   my $pagelink = $self->page_path($page);
@@ -297,7 +303,7 @@ sub add_to_list {
   ## Special fields to index.
   if (exists $pagedata->{index}) {
     for my $section (@{$pagedata->{index}}) {
-      if ($section ~= /(link|title|updated|snippet|tags|content)/) {
+      if ($section =~ /(link|title|updated|snippet|tags|content)/) {
         next; ## Skip non-overridable sections.
       }
       if (exists $pagedata->{$section}) {
@@ -312,9 +318,333 @@ sub add_to_list {
     $smartlist = $self->{conf}->{smartlist};
   }
 
-##### WE ARE HERE!
+  if (@{$cache} > 0) {
+    for (my $i=0; $i < @{$cache}; $i++) {
+      if ($cache->[$i]->{link} eq $pagelink) {
+        if ($story) {
+          splice(@{$cache}, $i, 1, $pagedef);
+          $added = 1;
+          last;
+        }
+        else {
+          splice(@{$cache}, $i, 1);
+        }
+      }
+      elsif ($smartlist) {
+        if (
+          $story
+          && exists $cache->[$i]->{chapter}
+          && exists $pagedef->{chapter}
+          && $cache->[$i]->{chapter} > $pagedef->{chapter}
+        ) {
+          splice(@{$cache}, $i, 0, $pagedef);
+          $added = 1;
+        }
+        elsif (
+          !$story
+          && !$added
+          && exists $cache->[$i]->{updated}
+        ) {
+          my $cdate = $self->get_datetime($cache->[$i]->{updated});
+          if ($cdate < $updated) {
+            splice(@{$cache}, $i, 0, $pagedef);
+            $added = 1;
+          }
+        }
+      }
+    }
+  }
+  ## If all else fails, fallback to default behaviour.
+  if (!$added) {
+    if ($story) {
+      push(@{$cache}, $pagedef);
+    }
+    else {
+      unshift(@{$cache}, $pagedef);
+    }
+  }
+
+  $self->save_cache($cachefile, $cache);
+
+  ## Queue up the story/index for building.
+  if ($story) {
+    $self->add_story($cache, $story);
+  }
+  else {
+    $self->add_index($cache, $tag);
+  }
 
 }
+
+sub build_index {
+  my ($self, $page, $index, $tag, $pagelimit) = @_;
+  my $perpage;
+  if ($pagelimit) { $perpage = $pagelimit; }
+  elsif (exists $self->{conf}->{indexes}->{perpage}) {
+    $perpage = $self->{conf}->{indexes}->{perpage};
+  }
+  else {
+    $perpage = 10;
+  }
+  my $from = ($perpage * $page) - $perpage;
+  my $to   = ($perpage * $page) - 1;
+  if ($to > @{$index}) { $to = @{$index}; }
+  my $pages = ceil(@{$index} / $perpage);
+  my @items = @{$index}[ $from .. $to ];
+  my @pager;
+  for my $pagecount ( 1 .. $pages ) {
+    my $pagelink = $self->index_path($pagecount, $tag);
+    my $current = 0;
+    if ($pagecount == $page) { $current = 1; }
+    my $pagerdef = {
+      'num'     => $pagecount,
+      'link'    => $pagelink,
+      'current' => $current,
+    };
+    push(@pager, $pagerdef);
+  }
+  my $pagedef = {
+    'type' => 'index',
+    'data' => {
+      'count'    => $pages,
+      'current'  => $page,
+      'pager'    => \@pager,
+      'items'    => $index,
+      'size'     => @{$index},
+      'tag'      => $tag,
+    },
+  };
+
+  my $content = $self->parse_page($pagedef);
+  my $outfile = $self->{conf}->{output} . $self->index_path($page, $tag);
+  $self->output_file($outfile, $content);
+
+  if ($to < @{$index}) {
+    $self->build_index($page+1, $index, $tag, $perpage);
+  }
+}
+
+sub build_story {
+  my ($self, $index, $page) = @_;
+  my $story = $self->get_page($page);
+  $story->{type} = 'story';
+  $story->{data}->{items} = $index;
+  $story->{data}->{size}  = @{$index};
+
+  my $content = $self->parse_page($story);
+  my $outfile = $self->{conf}->{output} . $self->story_path($page);
+  $self->output_file($outfile, $content);
+  $self->process_indexes($story);
+}
+
+sub get_page {
+  my ($self, $file) = @_;
+  my $parser = XML::LibXML->new();
+  my $xml = $parser->parse_file($file);
+  my $metadata = {};
+  my $node = $xml->getElementById('metadata');
+  my $nodetext = $node->textContent;
+  if ($nodetext) {
+    $metadata = decode_json($nodetext);
+  }
+  $node->unbindNode();
+  my $page = {
+    'file'   => $file,
+    'xml'    => $xml,
+    'data'   => $metadata,
+  };
+  return $page;
+}
+
+sub parse_page {
+  my ($self, $page) = @_;
+  my @plugins;
+  if (exists $self->{conf}->{page}->{plugins}) {
+    push @plugins, @{$self->{conf}->{page}->{plugins}};
+  }
+  if (exists $page->{data}->{plugins}) {
+    push @plugins, @{$page->{data}->{plugins}};
+  }
+  for my $module (@plugins) {
+    my $plugin = $self->load_plugin($module);
+    $plugin->parse($page);
+  }
+
+  my $metadata = $page->{data};
+  my $type = 'article';
+  if (exists $page->{type}) {
+    $type = $page->{type};
+  }
+
+  ## make "page/content" into the XML node(s), if this is a page.
+  if (exists $page->{xml}) {
+    ## Because of our modifications to Template::TAL, we can do this:
+    $metadata->{content} = $page->{xml};
+  }
+
+  my $template = $self->{conf}->{templates}->{$type};
+  ## The Template::TAL stuff is done in new rather than here.
+
+  my $sitedata = {};
+  if (exists $self->{conf}->{site}) {
+    $sitedata = $self->{conf}->{site};
+  }
+  my $parsedata = {
+    'site' => $sitedata,
+    'page' => $metadata,
+  };
+
+  my $pagecontent = $self->{tal}->process($template, $parsedata);
+  return $pagecontent;
+}
+
+## Spit out a file.
+sub output_file {
+  my ($self, $file, $content) = @_;
+  open (my $fh, '>', $file);
+  say $fh $content;
+  close ($fh);
+  say " -- Generated file: '$file'.";
+}
+
+## Create output folders.
+sub make_output_path {
+  my ($self, $folder) = @_;
+  make_path($self->{conf}->{output} . $folder);
+}
+
+## get-filename() has been replaced by basename() in this implementation.
+
+## Paths for pages (articles and story chapters.)
+sub page_path {
+  my ($self, $page) = @_;
+  my $file = $page->{file};
+  if (exists $self->{cache}->{page}->{$file}) {
+    return $self->{cache}->{page}->{$file};
+  }
+  my $opts = $page->{data};
+  my $filename = basename($file, ".xml");
+
+  my $dir;
+  if (exists $opts->{parent}) {
+    $dir = $self->story_folder($opts->{parent});
+  }
+  else {
+    $dir = '/articles';
+    if (!$opts->{toplevel}) {
+      my $date = 0;
+      if (exists $opts->{updated}) {
+        $date = $opts->{updated};
+      }
+      elsif (exists $opts->{changelog}) {
+        my $cl = $opts->{changelog};
+        my $last = $cl->[-1];
+        $date = $last->{date};
+      }
+      if ($date) {
+        my $dt = $self->get_datetime($date);
+        my $year = $dt->year;
+        my $month = sprintf('%02d', $dt->month);
+        $dir .= "/$year/$month";
+      }
+    }
+  }
+  $self->make_output_path($dir);
+  my $outpath = "${dir}/${filename}.html";
+  $self->{cache}->{page}->{$file} = $outpath;
+  return $outpath;
+}
+
+## Paths for indexes, not cached, as per WhiteNoise.
+sub index_path {
+  my ($self, $page, $tag) = @_;
+  if (!$page) { $page = 1; }
+  my $dir = '/';
+  if ($tag) {
+    $dir = "/tags/$tag/";
+  }
+  elsif ($page > 1) {
+    $dir = "/index/";
+  }
+  $self->make_output_path($dir);
+  my $file = 'index.html';
+  if ($page > 1) {
+    $file = "page${page}.html";
+  }
+  my $outpath = $dir . $file;
+  return $outpath;
+}
+
+## Story paths are used both for the story index
+## and the story pages. Here is the common version.
+sub story_folder {
+  my ($self, $file) = @_;
+  if (exists $self->{cache}->{folder}->{$file}) {
+    return $self->{cache}->{folder}->{$file};
+  }
+  my $filename = basename($file, ".xml");
+  my $folder = "/stories/$filename";
+  $self->{cache}->{folder}->{$file} = $folder;
+  return $folder;
+}
+
+## The path for the story table of contents.
+sub story_path {
+  my ($self, $file) = @_;
+  if (exists $self->{cache}->{page}->{$file}) {
+    return $self->{cache}->{page}->{$file};
+  }
+  my $folder = $self->story_folder($file);
+  $self->make_output_path($folder);
+  my $outpath = "$folder/index.html";
+  $self->{cache}->{page} = $outpath;
+  return $outpath;
+}
+
+## Cache path for indexes, ported as per WhiteNoise.
+sub index_cache {
+  my ($self, $tag) = @_;
+  if (!$tag) { $tag = 'index'; }
+  my $dir = './cache/indexes';
+  if (exists $self->{conf}->{indexes}->{folder}) {
+    $dir = $self->{conf}->{indexes}->{folder};
+  }
+  make_path($dir);
+  return "$dir/$tag.json";
+}
+
+## Cache path for stories.
+sub story_cache {
+  my ($self, $file) = @_;
+  if (exists $self->{cache}->{story}->{$file}) {
+    return $self->{cache}->{story}->{$file};
+  }
+  my $filename = basename($file, ".xml");
+  
+  my $dir = './cache/stories';
+  if (exists $self->{conf}->{stories}->{folder}) {
+    $dir = $self->{conf}->{stories}->{folder};
+  }
+  make_path($dir);
+  my $cachedir = "$dir/$filename.json";
+  $self->{cache}->{story}->{$file} = $cachedir;
+  return $cachedir;
+}
+
+sub load_plugin {
+  my ($self, $module) = @_;
+  if (exists $self->{cache}->{plugins}->{$module}) {
+    return $self->{cache}->{plugins}->{$module};
+  }
+  ## A big difference between this and WhiteNoise:
+  ## We require full module namespaces. No shortcuts.
+  $module->require or die "Can't load plugin '$module': $@";
+  my $plugin = $module->new or die "Couldn't initialize plugin '$module': $@";
+  $plugin->{engine} = $self; ## Add ourself to the plugin.
+  $self->{cache}->{plugins} = $plugin;
+  return $plugin;
+}
+
 #####################
 1; # End of library #
    ##################
