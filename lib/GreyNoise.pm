@@ -125,7 +125,7 @@ sub cache {
     return $self;
   }
   elsif (
-    $id,
+    $id
     && exists $self->{cache}->{$type} 
     && exists $self->{cache}->{$type}->{$id}
   ) {
