@@ -1,0 +1,19 @@
+<page>
+<p>
+This one exists purely for testing the tagging system.
+</p>
+
+<json id="metadata">
+{
+  "title" : "Another Article",
+  "tags"  : [ "whitenoise" ],
+  "changelog" :
+  [
+    {
+      "date"    : "2011-01-17T13:45:00-0800",
+      "comment" : "initial version"
+    }
+  ]
+}
+</json>
+</page>

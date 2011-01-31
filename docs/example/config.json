@@ -1,0 +1,29 @@
+{
+  "site" : 
+  {
+    "title" : "My site",
+  },
+  "refs"  :
+  {
+    "wp" : "http://en.wikipedia.org/wiki/Special:Search?search=%s"
+  },
+  "plugins" : [ "GreyNoise::Pages::References" ],
+  "templates" :
+  {
+    "plugins" : [ "GreyNoise::Templates::Date" ],
+    "folder"    : "./templates",
+    "article"   : "article.xml",
+    "story"     : "story.xml",
+    "index"     : "index.xml"
+  },
+  "output"  : "./htdocs",
+  "indexes" :
+  {
+    "folder"   : "./cache/indexes",
+    "perpage"  : 5
+  },
+  "stories" :
+  {
+    "folder"   : "./cache/stories"
+  }
+}

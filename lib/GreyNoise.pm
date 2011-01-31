@@ -52,7 +52,7 @@ sub pretty_json {
   return $text;
 }
 
-#### Methods
+#### Constructor
 
 sub new {
   my $class = shift;
@@ -88,34 +88,85 @@ sub new {
   return bless $data, $class;
 }
 
+## Accessors
+
+sub conf {
+  my $self = shift;
+  return $self->{conf};
+}
+
+sub tal {
+  my $self = shift;
+  return $self->{tal};
+}
+
+sub pages {
+  my ($self, $add) = @_;
+  return $self->{pages} unless $add;
+  $self->{pages}->{$add} = 1;
+}
+
+sub stories {
+  my ($self, $add, $value) = @_;
+  return $self->{stories} unless $add;
+  $self->{stories}->{$add} = $value;
+}
+
+sub indexes {
+  my ($self, $add, $value) = @_;
+  return $self->{indexes} unless $add;
+  $self->{indexes}->{$add} = $value;
+}
+
+sub cache {
+  my ($self, $type, $id, $set) = @_;
+  if ($set) {
+    $self->{cache}->{$type}->{$id} = $set;
+    return $self;
+  }
+  elsif (
+    $id,
+    && exists $self->{cache}->{$type} 
+    && exists $self->{cache}->{$type}->{$id}
+  ) {
+    return $self->{cache}->{$type}->{$id};
+  }
+  elsif ( $type && exists $self->{cache}->{$type} ) {
+    return $self->{cache}->{$type};
+  }
+  return;
+}
+
+## Methods
+
 sub add_page {
   my ($self, $file) = @_;
   if (!-f $file) { say "skipping missing page '$file'..."; return; }
-  $self->{pages}->{$file} = 1;
+  $self->pages($file);
 }
 
 sub add_story {
   my ($self, $cache, $file) = @_;
   if (!-f $file) { say "skipping missing story '$file'..."; return }
-  $self->{stories}->{$file} = $cache;
+  $self->stories($file, $cache);
 }
 
 sub add_index {
   my ($self, $cache, $tag) = @_;
   if (!$tag) { $tag = 'index'; }
-  $self->{indexes}->{$tag} = $cache;
+  $self->indexes($tag, $cache);
 }
 
 ## The main routine to start this process.
 sub generate {
   my $self = shift;
-  for my $page (keys %{$self->{pages}}) {
+  for my $page (keys %{$self->pages}) {
     $self->build_page($page);
   }
-  while ( my ($file, $cache) = each %{$self->{stories}} ) {
+  while ( my ($file, $cache) = each %{$self->stories} ) {
     $self->build_story($cache, $file);
   }
-  while ( my ($tag, $cache) = each %{$self->{stories}} ) {
+  while ( my ($tag, $cache) = each %{$self->stories} ) {
     if ($tag eq 'index') {
       $self->build_index(1, $cache);
     }
@@ -149,7 +200,7 @@ sub build_page {
   my ($self, $file) = @_;
   my $page = $self->get_page($file);
   my $pagecontent = $self->parse_page($page);
-  my $outfile = $self->{conf}->{output} . $self->page_page($page);
+  my $outfile = $self->conf->{output} . $self->page_page($page);
   $self->output_file($outfile, $pagecontent);
   if (exists($page->{data}->{parent})) {
     $self->process_story($page);
@@ -161,13 +212,15 @@ sub build_page {
 
 sub load_cache {
   my ($self, $file, $need) = @_;
-  if (exists($self->{cache}->{cache}->{$file})) {
-    return $self->{cache}->{cache}->{$file};
+  { no warnings;
+    if (my $cache = $self->cache('cache', $file)) {
+      return $cache;
+    }
   }
   if (-f $file) {
     my $text = slurp($file);
     my $json = decode_json($text);
-    $self->{cache}->{cache}->{$file} = $json;
+    $self->cache('cache', $file, $json);
     return $json;
   }
   elsif ($need) {
@@ -181,12 +234,12 @@ sub load_cache {
 
 sub save_cache {
   my ($self, $file, $data) = @_;
-  $self->{cache}->{cache}->{$file} = $data;
+  $self->cache('cache', $file, $data);
 }
 
 sub save_caches {
   my $self = shift;
-  while (my ($file, $data) = each %{$self->{cache}->{cache}}) {
+  while (my ($file, $data) = each %{$self->cache('cache')}) {
     my $text = json_encode($data); # caches don't need pretty.
     $self->output_file($file, $text);
   }
@@ -210,8 +263,10 @@ sub process_indexes {
 
 sub get_datetime {
   my ($self, $updated) = @_;
-  if (exists($self->{cache}->{date}->{$updated})) {
-    return $self->{cache}->{date}->{$updated};
+  { no warnings;
+    if (my $cache = $self->cache('date', $updated)) {
+      return $cache;
+    }
   }
   my $dt;
   if ($updated =~ /^\d+$/) { ## If we are an integer, assume Epoch value.
@@ -225,7 +280,7 @@ sub get_datetime {
     my $parser = DateTime::Format::Perl6->new();
     $dt = $parser->parse_datetime($updated);
   }
-  $self->{cache}->{date}->{$updated} = $dt;
+  $self->cache('date', $updated, $dt);
   return $dt;
 }
 
@@ -259,7 +314,7 @@ sub add_to_list {
   else {
     $updated = DateTime->now();
     $updated->set_time_zone('local');
-    $self->{cache}->{date}->{"$updated"} = $updated;
+    $self->cache('date', "$updated", $updated);
   }
 
   my $snippet = $page->{xml}->getElementById('snippet');
@@ -314,8 +369,8 @@ sub add_to_list {
 
   my $added = 0;
   my $smartlist = 1;
-  if (exists $self->{conf}->{smartlist}) {
-    $smartlist = $self->{conf}->{smartlist};
+  if (exists $self->conf->{smartlist}) {
+    $smartlist = $self->conf->{smartlist};
   }
 
   if (@{$cache} > 0) {
@@ -380,8 +435,8 @@ sub build_index {
   my ($self, $page, $index, $tag, $pagelimit) = @_;
   my $perpage;
   if ($pagelimit) { $perpage = $pagelimit; }
-  elsif (exists $self->{conf}->{indexes}->{perpage}) {
-    $perpage = $self->{conf}->{indexes}->{perpage};
+  elsif (exists $self->conf->{indexes}->{perpage}) {
+    $perpage = $self->conf->{indexes}->{perpage};
   }
   else {
     $perpage = 10;
@@ -416,7 +471,7 @@ sub build_index {
   };
 
   my $content = $self->parse_page($pagedef);
-  my $outfile = $self->{conf}->{output} . $self->index_path($page, $tag);
+  my $outfile = $self->conf->{output} . $self->index_path($page, $tag);
   $self->output_file($outfile, $content);
 
   if ($to < @{$index}) {
@@ -432,7 +487,7 @@ sub build_story {
   $story->{data}->{size}  = @{$index};
 
   my $content = $self->parse_page($story);
-  my $outfile = $self->{conf}->{output} . $self->story_path($page);
+  my $outfile = $self->conf->{output} . $self->story_path($page);
   $self->output_file($outfile, $content);
   $self->process_indexes($story);
 }
@@ -459,8 +514,8 @@ sub get_page {
 sub parse_page {
   my ($self, $page) = @_;
   my @plugins;
-  if (exists $self->{conf}->{page}->{plugins}) {
-    push @plugins, @{$self->{conf}->{page}->{plugins}};
+  if (exists $self->conf->{page}->{plugins}) {
+    push @plugins, @{$self->conf->{page}->{plugins}};
   }
   if (exists $page->{data}->{plugins}) {
     push @plugins, @{$page->{data}->{plugins}};
@@ -482,19 +537,19 @@ sub parse_page {
     $metadata->{content} = $page->{xml};
   }
 
-  my $template = $self->{conf}->{templates}->{$type};
+  my $template = $self->conf->{templates}->{$type};
   ## The Template::TAL stuff is done in new rather than here.
 
   my $sitedata = {};
-  if (exists $self->{conf}->{site}) {
-    $sitedata = $self->{conf}->{site};
+  if (exists $self->conf->{site}) {
+    $sitedata = $self->conf->{site};
   }
   my $parsedata = {
     'site' => $sitedata,
     'page' => $metadata,
   };
 
-  my $pagecontent = $self->{tal}->process($template, $parsedata);
+  my $pagecontent = $self->tal->process($template, $parsedata);
   return $pagecontent;
 }
 
@@ -510,7 +565,7 @@ sub output_file {
 ## Create output folders.
 sub make_output_path {
   my ($self, $folder) = @_;
-  make_path($self->{conf}->{output} . $folder);
+  make_path($self->conf->{output} . $folder);
 }
 
 ## get-filename() has been replaced by basename() in this implementation.
@@ -519,8 +574,10 @@ sub make_output_path {
 sub page_path {
   my ($self, $page) = @_;
   my $file = $page->{file};
-  if (exists $self->{cache}->{page}->{$file}) {
-    return $self->{cache}->{page}->{$file};
+  { no warnings;
+    if (my $cache = $self->cache('page', $file)) {
+      return $cache;
+    }
   }
   my $opts = $page->{data};
   my $filename = basename($file, ".xml");
@@ -551,7 +608,7 @@ sub page_path {
   }
   $self->make_output_path($dir);
   my $outpath = "${dir}/${filename}.html";
-  $self->{cache}->{page}->{$file} = $outpath;
+  $self->cache('page', $file, $outpath);
   return $outpath;
 }
 
@@ -579,25 +636,29 @@ sub index_path {
 ## and the story pages. Here is the common version.
 sub story_folder {
   my ($self, $file) = @_;
-  if (exists $self->{cache}->{folder}->{$file}) {
-    return $self->{cache}->{folder}->{$file};
+  { no warnings;
+    if (my $cache = $self->cache('folder', $file)) {
+      return $cache;
+    }
   }
   my $filename = basename($file, ".xml");
   my $folder = "/stories/$filename";
-  $self->{cache}->{folder}->{$file} = $folder;
+  $self->cache('folder', $file, $folder);
   return $folder;
 }
 
 ## The path for the story table of contents.
 sub story_path {
   my ($self, $file) = @_;
-  if (exists $self->{cache}->{page}->{$file}) {
-    return $self->{cache}->{page}->{$file};
+  { no warnings;
+    if (my $cache = $self->cache('page', $file)) {
+      return $cache;
+    }
   }
   my $folder = $self->story_folder($file);
   $self->make_output_path($folder);
   my $outpath = "$folder/index.html";
-  $self->{cache}->{page} = $outpath;
+  $self->cache('page', $file, $outpath);
   return $outpath;
 }
 
@@ -606,8 +667,8 @@ sub index_cache {
   my ($self, $tag) = @_;
   if (!$tag) { $tag = 'index'; }
   my $dir = './cache/indexes';
-  if (exists $self->{conf}->{indexes}->{folder}) {
-    $dir = $self->{conf}->{indexes}->{folder};
+  if (exists $self->conf->{indexes}->{folder}) {
+    $dir = $self->conf->{indexes}->{folder};
   }
   make_path($dir);
   return "$dir/$tag.json";
@@ -616,32 +677,36 @@ sub index_cache {
 ## Cache path for stories.
 sub story_cache {
   my ($self, $file) = @_;
-  if (exists $self->{cache}->{story}->{$file}) {
-    return $self->{cache}->{story}->{$file};
+  { no warnings;
+    if (my $cache = $self->cache('story', $file)) {
+      return $cache;
+    }
   }
   my $filename = basename($file, ".xml");
   
   my $dir = './cache/stories';
-  if (exists $self->{conf}->{stories}->{folder}) {
-    $dir = $self->{conf}->{stories}->{folder};
+  if (exists $self->conf->{stories}->{folder}) {
+    $dir = $self->conf->{stories}->{folder};
   }
   make_path($dir);
   my $cachedir = "$dir/$filename.json";
-  $self->{cache}->{story}->{$file} = $cachedir;
+  $self->cache('story', $file, $cachedir);
   return $cachedir;
 }
 
 sub load_plugin {
   my ($self, $module) = @_;
-  if (exists $self->{cache}->{plugins}->{$module}) {
-    return $self->{cache}->{plugins}->{$module};
+  { no warnings;
+    if (my $cache = $self->cache('plugins', $module)) {
+      return $cache;
+    }
   }
   ## A big difference between this and WhiteNoise:
   ## We require full module namespaces. No shortcuts.
   $module->require or die "Can't load plugin '$module': $@";
-  my $plugin = $module->new or die "Couldn't initialize plugin '$module': $@";
-  $plugin->{engine} = $self; ## Add ourself to the plugin.
-  $self->{cache}->{plugins} = $plugin;
+  my $plugin = $module->new( engine => $self )
+    or die "Couldn't initialize plugin '$module': $@";
+  $self->cache('plugins', $module, $plugin);
   return $plugin;
 }
 

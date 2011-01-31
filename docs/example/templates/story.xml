@@ -1,0 +1,44 @@
+<html>
+<head>
+<title tal:content="string:${site/title} -- ${page/title}">title</title>
+<link rel="stylesheet" href="/style/main.css" />
+<link rel="stylesheet" tal:condition="page/css"
+      tal:attributes="href page/css" />
+</head>
+<body>
+<h1 tal:content="site/title">site title</h1>
+<h2 tal:content="page/title">page title</h2>
+<div id="content" tal:content="page/content">
+content goes here
+</div>
+<div id="chapters">
+<dl>
+<tal:block tal:repeat="item page/items">
+<dt>
+<a tal:content="item/title"
+   tal:attributes="href item/link">chapter title</a>
+</dt>
+<dd>
+<p>
+Updated on <em tal:content="strftime: '%b %d, %Y' item/updated">date</em>.
+</p>
+<span tal:replace="structure item/snippet">snippet</span>
+</dd>
+</tal:block>
+</dl>
+</div>
+<div id="changelog" tal:condition="page/changelog">
+<h4>Changelog</h4>
+<dl>
+<tal:block tal:repeat="log page/changelog">
+<dt tal:content="strftime: '%b %d, %Y' log/date">date</dt>
+<dd tal:content="log/comment">comment</dd>
+</tal:block>
+</dl>
+</div>
+<div id="copyright">
+Copyright &copy; 2011, Timothy Totten. 
+Site powered by WhiteNoise.
+</div>
+</body>
+</html>

@@ -1,0 +1,26 @@
+<page>
+<p>
+It was a long, long time ago, in a place far, far away.
+</p>
+<p id="snippet">
+And it wasn't nearly as boring as this chapter.
+</p>
+<p>
+However, it was a good example of how stories work in WhiteNoise.
+</p>
+
+<json id="metadata">
+{
+  "title"     : "Chapter 1",
+  "parent"    : "./stories/a-fine-story.xml",
+  "chapter"   : 1,
+  "changelog" :
+  [
+    {
+      "date"     : "2011-01-16T15:15:30-0800",
+      "comment"  : "Added a first chapter"
+    }
+  ]
+}
+</json>
+</page>

@@ -1,0 +1,23 @@
+<page>
+<p>
+The second chapter wasn't much better.
+</p>
+<p>
+But it was needed to show how stories are ordered in the listing.
+</p>
+
+<json id="metadata">
+{
+  "title"     : "Chapter 2",
+  "parent"    : "./stories/a-fine-story.xml",
+  "chapter"   : 2,
+  "changelog" :
+  [
+    { 
+      "date"    : "2011-01-16T15:30:25-0800",
+      "comment" : "Added chapter 2"
+    }
+  ]
+}
+</json>
+</page>

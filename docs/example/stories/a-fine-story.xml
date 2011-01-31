@@ -1,0 +1,12 @@
+<page>
+<p>
+Yes, this is the example of what a story main page looks like.
+It's not very exciting, but it should give an idea of how stories work.
+</p>
+<json id="metadata">
+{
+  "title" : "A Fine Story",
+  "tags"  : [ "example", "stories" ]
+}
+</json>
+</page>

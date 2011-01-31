@@ -1,0 +1,34 @@
+<page note="the top level element will be stripped">
+<p>
+There's not much on here yet. I will use this as an example of how the
+Reference plugin works though. If you want references, we got references.
+Maybe an article from <a ref:site="wp">wikipedia</a>,
+or a video from <a ref:site="wp" ref:term="Youtube">that famous video site</a>.
+Whatever floats your boat.
+</p>
+<p>
+There are more paragraphs, but they aren't very interesting either.
+</p>
+
+<json id="metadata" note="the metadata element will be stripped">
+{
+  "title" : "An Article",
+  "tags"  : [ "example", "whitenoise" ],
+  "changelog" :
+  [
+    {
+      "date"    : "2011-01-15T13:30:00-0800",
+      "comment" : "updated for new beta version"
+    },
+    {
+      "date"    : "2011-01-14T15:15:00-0800",
+      "comment" : "revised for new alpha version"
+    },
+    {
+      "date"    : "2011-01-12T15:30:00-0800",
+      "comment" : "first version"
+    }
+  ]
+}
+</json>
+</page>

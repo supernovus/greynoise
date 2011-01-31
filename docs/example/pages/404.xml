@@ -1,0 +1,13 @@
+<page>
+<p>
+Sorry, the page you were looking for could not be found.
+Please try again.
+</p>
+
+<json id="metadata">
+{
+  "title" : "Page Not Found",
+  "noindex" : 1
+}
+</json>
+</page>

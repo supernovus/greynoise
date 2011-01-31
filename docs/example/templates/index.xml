@@ -1,0 +1,45 @@
+<html>
+<head>
+<title>
+<span tal:replace="site/title">site title</span>
+<span tal:condition="page/tag" tal:replace="string: -- ${page/tag}">
+index tag
+</span>
+</title>
+<link rel="stylesheet" href="/style/main.css" />
+</head>
+<body>
+<h1 tal:content="site/title">site title</h1>
+<h2 tal:condition="page/tag" tal:content="page/tag">index tag</h2>
+<div id="listing" tal:repeat="item page/items">
+<h3>
+<a tal:content="item/title"
+   tal:attributes="href item/link">page title</a>
+</h3>
+<h4 tal:content="strftime: '%b %d, %Y' item/updated">date</h4>
+<span tal:replace="structure item/snippet">snippet</span>
+<div class="tags" tal:condition="item/tags">
+Tags:
+<tal:block tal:repeat="tag item/tags">
+<a tal:content="tag/name" tal:attributes="href tag/link">tag</a>
+<tal:block tal:condition="not:repeat/tag/end">, </tal:block>
+</tal:block>
+</div>
+</div>
+<div id="pager">
+Page <em tal:replace="page/current"/> of <em tal:replace="page/count"/>: 
+<tal:block tal:repeat="pager page/pager">
+<b tal:condition="pager/current" 
+   tal:content="pager/num">page</b>
+<a tal:condition="not:pager/current" 
+   tal:content="pager/num"
+   tal:attributes="href pager/link">page</a>
+<tal:block tal:condition="not:repeat/pager/end">, </tal:block>
+</tal:block>
+</div>
+<div id="copyright">
+Copyright &copy; 2011, Timothy Totten. 
+Site powered by WhiteNoise.
+</div>
+</body>
+</html>
