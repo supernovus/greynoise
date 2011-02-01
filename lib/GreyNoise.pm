@@ -547,6 +547,7 @@ sub parse_page {
   my $parsedata = {
     'site' => $sitedata,
     'page' => $metadata,
+    '-app' => $self,     # some voodoo magic here.
   };
 
   my $pagecontent = $self->tal->process($template, $parsedata);
