@@ -5,3 +5,5 @@ Build
 MYMETA.yml
 _build
 blib
+docs/example/cache
+docs/example/htdocs

@@ -1,6 +1,6 @@
 =head1 NAME
 
-Template::TAL::Provider::Disk - find template files on disk
+Template::TAL::Provider::Disk - find XML template files on disk
 
 =head1 SYNOPSIS
 
@@ -56,6 +56,26 @@ sub include_path {
   return $self;
 }
 
+=item input_format
+
+When called with no argument returns the input format (XML or HTML).
+If called with an argument, sets the format. The format must be XML or HTML
+(case insensitive.)
+
+=cut
+
+sub input_format {
+  my $self = shift;
+
+  unless (@_) {
+    return $self->{input_format} ||= 'XML';
+  }
+
+  $self->{input_format} = shift;
+
+  return $self;
+}
+
 =item get_template( name )
 
 searches the include path for files of the given name, and returns the first
@@ -73,8 +93,14 @@ sub get_template {
       my $abs = abs_path( $filename );
       croak("not loading $filename from outside include path")
         unless $abs =~ /^\Q$path/;
-      
-      return Template::TAL::Template->new->filename( $filename );
+     
+      my $template = Template::TAL::Template->new;
+      if (uc($self->input_format) eq 'HTML') {
+        return $template->html_filename( $filename );
+      }
+      else {
+        return $template->filename( $filename );
+      }
     }
   }
   croak("no template '$name' found");

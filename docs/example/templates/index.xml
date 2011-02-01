@@ -1,4 +1,10 @@
-<html>
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html>
+<html 
+  xmlns="http://www.w3.org/1999/xhtml"
+  xmlns:tal="http://xml.zope.org/namespaces/tal"
+  xmlns:metal="http://xml.zope.org/namespaces/metal"
+>
 <head>
 <title>
 <span tal:replace="site/title">site title</span>
@@ -20,25 +26,25 @@ index tag
 <span tal:replace="structure item/snippet">snippet</span>
 <div class="tags" tal:condition="item/tags">
 Tags:
-<tal:block tal:repeat="tag item/tags">
+<div tal:omit-tag="" tal:repeat="tag item/tags">
 <a tal:content="tag/name" tal:attributes="href tag/link">tag</a>
-<tal:block tal:condition="not:repeat/tag/end">, </tal:block>
-</tal:block>
+<span tal:omit-tag="" tal:condition="not:repeat/tag/end">, </span>
+</div>
 </div>
 </div>
 <div id="pager">
 Page <em tal:replace="page/current"/> of <em tal:replace="page/count"/>: 
-<tal:block tal:repeat="pager page/pager">
+<div tal:omit-tag="" tal:repeat="pager page/pager">
 <b tal:condition="pager/current" 
    tal:content="pager/num">page</b>
 <a tal:condition="not:pager/current" 
    tal:content="pager/num"
    tal:attributes="href pager/link">page</a>
-<tal:block tal:condition="not:repeat/pager/end">, </tal:block>
-</tal:block>
+<span tal:omit-tag="" tal:condition="not:repeat/pager/end">, </span>
+</div>
 </div>
 <div id="copyright">
-Copyright &copy; 2011, Timothy Totten. 
+Copyright ++copy++ 2011, Timothy Totten. 
 Site powered by WhiteNoise.
 </div>
 </body>

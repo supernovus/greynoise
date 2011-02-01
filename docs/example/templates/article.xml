@@ -1,4 +1,10 @@
-<html>
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html>
+<html 
+  xmlns="http://www.w3.org/1999/xhtml"
+  xmlns:tal="http://xml.zope.org/namespaces/tal"
+  xmlns:metal="http://xml.zope.org/namespaces/metal"
+>
 <head>
 <title tal:content="string:${site/title} -- ${page/title}">title</title>
 <link rel="stylesheet" href="/style/main.css" />
@@ -8,7 +14,7 @@
 <body>
 <h1 tal:content="site/title">site title</h1>
 <h2 tal:content="page/title">page title</h2>
-<div id="content" tal:content="page/content">
+<div id="content" tal:content="structure page/content">
 content goes here
 </div>
 <div id="changelog" tal:condition="page/changelog">
@@ -21,7 +27,7 @@ content goes here
 </dl>
 </div>
 <div id="copyright">
-Copyright &copy; 2011, Timothy Totten. 
+Copyright ++copy++ 2011, Timothy Totten. 
 Site powered by WhiteNoise.
 </div>
 </body>

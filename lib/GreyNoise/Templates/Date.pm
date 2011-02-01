@@ -7,11 +7,12 @@
 ## If and only if the $contexts[1]->{'-app'} exists, and does in
 ## fact have a get_datetime method.
 
-package GreyNoise::Template::Date;
+package GreyNoise::Templates::Date;
 
 use warnings;
 use strict;
 use base qw( GreyNoise::Plugin );
+use v5.10;
 
 use Template::TAL::ValueParser;
 use DateTime;
@@ -20,7 +21,10 @@ use DateTime::Format::Perl6;
 sub process_tales_strftime {
   my ($class, $string, $contexts, $plugins) = @_;
 
-  my ($format, $lookup) = $string =~ /^'.*?'\s+(.*)$/;
+  my ($format, $lookup) = $string =~ /^'(.*?)'\s+(.*)$/;
+
+  #say "format» $format";
+  #say "lookup» $lookup";
 
   my $greynoise;
   if (exists $contexts->[1]->{'-app'}) {

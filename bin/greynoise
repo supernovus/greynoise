@@ -48,7 +48,6 @@ given ($command) {
   when ('--dir') {
     my @pages = File::Find::Rule->file->name('*.xml')->in($build);
     for my $page (@pages) {
-      say "Adding $page";
       $greynoise->add_page($page);
     }
   }

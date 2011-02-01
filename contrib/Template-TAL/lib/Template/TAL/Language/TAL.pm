@@ -162,7 +162,7 @@ sub _dom_for_content {
       # convert to utf-8 bytes, and parse as a utf-8 document, to preserve non-ascii
       my $bytes = Encode::encode_utf8($content);
       $document = $parser->parse_string(
-        "<?xml version='1' encoding='utf-8'?><document>$bytes</document>");    
+        "<?xml version='1.0' encoding='utf-8'?><document>$bytes</document>");    
     }
     return $document->documentElement->childNodes;
   }
@@ -182,8 +182,11 @@ sub process_tag_attributes {
 
 sub process_tag_omit_tag {
   my ($self, $parent, $node, $value, $local_context, $global_context) = @_;
-  # if value is false, don't do anything
-  return $node unless $parent->parse_tales($value, $local_context, $global_context);
+  # special form, empty string, is automatic success.
+  if ($value ne "") {
+    # if value is false, don't do anything
+    return $node unless $parent->parse_tales($value, $local_context, $global_context);
+  }
   # otherwise process this node as normal, and return the children of it
   $parent->_process_node( $node, $local_context, $global_context );
   return $node->childNodes();

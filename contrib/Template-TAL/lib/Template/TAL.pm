@@ -134,6 +134,11 @@ sub new {
     $self->provider->include_path(delete $args{include_path});
   }
 
+  # if we've got an input format, pass it to the provider.
+  if (exists $args{input_format}) {
+    $self->provider->input_format(delete $args{input_format});
+  }
+
   # if we've got an output set it
   if (exists $args{output}) {
     $self->output( delete $args{output} );

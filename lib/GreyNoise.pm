@@ -36,6 +36,8 @@ use XML::LibXML;   ## Used for pages and page templates.
 use Carp;          ## Useful for some functions.
 use POSIX;         ## We're using ceil().
 
+use Cwd qw(abs_path); ## Ensure our include dir is a full path.
+
 use UNIVERSAL::require; ## A quick way to load plugins.
 
 use File::Basename;            ## Better than get-filename from WhiteNoise.
@@ -52,6 +54,27 @@ sub pretty_json {
   return $text;
 }
 
+## debug_obj: debugging tool, dumps things either as JSON or a string.
+sub dump_obj {
+  my $name = shift;
+  my $object = shift;
+  print "$name » ";
+  if (ref $object) {
+    print "JSON: ";
+    say pretty_json($object);
+  }
+  else {
+    print "String: ";
+    say $object;
+  }
+}
+
+## getById, works around the DTD limitations of getElementById()
+sub getById {
+  my ($doc, $id) = @_;
+  return ($doc->findnodes("//*[\@id = '$id']"))[0];
+}
+
 #### Constructor
 
 sub new {
@@ -60,11 +83,13 @@ sub new {
   if (!-f $config) { die "config file '$config' not found"; }
   my $conf = decode_json(slurp($config));
   my $tal  = Template::TAL->new( 
-    include_path => $conf->{templates}->{folder},
+    include_path => abs_path($conf->{templates}->{folder}),
+#    input_format => 'HTML',
     output       => 'Template::TAL::Output::XML',
   );
   if ($conf->{templates}->{plugins}) { ## Template plugins.
-    for my $plugin (@{$conf->{plugins}}) {
+    for my $plugin (@{$conf->{templates}->{plugins}}) {
+#      say "Adding Template plugin '$plugin'";
       $tal->add_language($plugin);
     }
   }
@@ -124,12 +149,13 @@ sub cache {
     $self->{cache}->{$type}->{$id} = $set;
     return $self;
   }
-  elsif (
-    $id
-    && exists $self->{cache}->{$type} 
-    && exists $self->{cache}->{$type}->{$id}
-  ) {
-    return $self->{cache}->{$type}->{$id};
+  elsif ($id) {
+    if (
+         exists $self->{cache}->{$type} 
+      && exists $self->{cache}->{$type}->{$id}
+    ) {
+      return $self->{cache}->{$type}->{$id};
+    }
   }
   elsif ( $type && exists $self->{cache}->{$type} ) {
     return $self->{cache}->{$type};
@@ -166,7 +192,7 @@ sub generate {
   while ( my ($file, $cache) = each %{$self->stories} ) {
     $self->build_story($cache, $file);
   }
-  while ( my ($tag, $cache) = each %{$self->stories} ) {
+  while ( my ($tag, $cache) = each %{$self->indexes} ) {
     if ($tag eq 'index') {
       $self->build_index(1, $cache);
     }
@@ -198,9 +224,13 @@ sub regenerate {
 
 sub build_page {
   my ($self, $file) = @_;
+  say "» Building page $file";
   my $page = $self->get_page($file);
   my $pagecontent = $self->parse_page($page);
-  my $outfile = $self->conf->{output} . $self->page_page($page);
+#  say "Debugging!!!!!!!!!!!!!";
+#  say $pagecontent;
+#  say "!!!!!!!!!!!!!Debugging";
+  my $outfile = $self->conf->{output} . $self->page_path($page);
   $self->output_file($outfile, $pagecontent);
   if (exists($page->{data}->{parent})) {
     $self->process_story($page);
@@ -239,8 +269,9 @@ sub save_cache {
 
 sub save_caches {
   my $self = shift;
+  say "» Saving caches to disk";
   while (my ($file, $data) = each %{$self->cache('cache')}) {
-    my $text = json_encode($data); # caches don't need pretty.
+    my $text = pretty_json($data); ## We want readable cache files.
     $self->output_file($file, $text);
   }
 }
@@ -265,11 +296,13 @@ sub get_datetime {
   my ($self, $updated) = @_;
   { no warnings;
     if (my $cache = $self->cache('date', $updated)) {
+#      say "Returning cache for '$updated' datetime: $cache";
       return $cache;
     }
   }
   my $dt;
   if ($updated =~ /^\d+$/) { ## If we are an integer, assume Epoch value.
+#    say "++ » Getting datetime from epoch";
     $dt = DateTime->from_epoch( 
       epoch => $updated, 
       formatter => DateTime::Format::Perl6->new()
@@ -277,6 +310,7 @@ sub get_datetime {
     $dt->set_time_zone('local'); ## Move into local-time AFTER parsing.
   }
   else {
+#    say "++ » Getting datetime from perl6 string";
     my $parser = DateTime::Format::Perl6->new();
     $dt = $parser->parse_datetime($updated);
   }
@@ -317,10 +351,22 @@ sub add_to_list {
     $self->cache('date', "$updated", $updated);
   }
 
-  my $snippet = $page->{xml}->getElementById('snippet');
-  if (!$snippet) {
-    $snippet = $page->{xml}->documentElement->firstChild;
+  #say "Page XML » ".$page->{xml}->toString;
+
+  #my $snippet = $page->{xml}->getElementById('snippet');
+  my $snippet = getById($page->{xml}, 'snippet');
+  if ($snippet) {
+    $snippet = $snippet->cloneNode(1);
+    $snippet->removeAttribute('id');
   }
+  else {
+#    say "» No snippet id was found, taking first <p/> element"; 
+    my @ps = $page->{xml}->getElementsByTagName('p');
+    if (@ps) {
+      $snippet = $ps[0]->cloneNode(1);
+    }
+  }
+#  say "snippet: ".$snippet->toString;
 
   my $type = 'article';
   if (exists $page->{type}) {
@@ -333,8 +379,10 @@ sub add_to_list {
     'link'      => $pagelink,
     'title'     => $pagedata->{title},
     'updated'   => "$updated",
-    'snippet'   => $snippet->toString(),
+    'snippet'   => $snippet->toString,
   };
+
+# say "… We got past the pagedef";
 
   ## Lets add any tag links.
   if (exists $pagedata->{tags}) {
@@ -349,6 +397,8 @@ sub add_to_list {
       $pagedef->{tags} = \@tags;
     }
   }
+
+#  say "… We got past the tags";
 
   ## Add a chapter number, if it exists.
   if (exists $pagedata->{chapter}) {
@@ -367,72 +417,111 @@ sub add_to_list {
     }
   }
 
+#  say "… We got past chapter number and special fields";
+
   my $added = 0;
   my $smartlist = 1;
   if (exists $self->conf->{smartlist}) {
     $smartlist = $self->conf->{smartlist};
   }
 
-  if (@{$cache} > 0) {
-    for (my $i=0; $i < @{$cache}; $i++) {
-      if ($cache->[$i]->{link} eq $pagelink) {
+#  say "» Starting the index placement routine...";
+
+  my $ccount = @{$cache};
+
+#  say " -- ccount: $ccount";
+
+  if ($ccount > 0) {
+    for (my $i=0; $i < $ccount; $i++) {
+#      say "on count: $i";
+#      dump_obj("cache[$i]", $cache->[$i]);
+      if ($cache->[$i] && $cache->[$i]->{link} eq $pagelink) {
+#        say "» Found our old entry!";
         if ($story) {
+#          say "… replacing it.";
           splice(@{$cache}, $i, 1, $pagedef);
           $added = 1;
           last;
         }
         else {
-          splice(@{$cache}, $i, 1);
+#          say "… removing it.";
+          splice(@{$cache}, $i--, 1);
         }
       }
       elsif ($smartlist) {
+#        say "» Searching for the right placement.";
         if (
           $story
+          && !$added
+          && $cache->[$i]
           && exists $cache->[$i]->{chapter}
           && exists $pagedef->{chapter}
           && $cache->[$i]->{chapter} > $pagedef->{chapter}
         ) {
+#          say "… we're a chapter, stick us in place.";
           splice(@{$cache}, $i, 0, $pagedef);
+          $ccount++;
           $added = 1;
         }
         elsif (
           !$story
           && !$added
+          && $cache->[$i]
           && exists $cache->[$i]->{updated}
         ) {
+#          say "… finding the date to put us in.";
           my $cdate = $self->get_datetime($cache->[$i]->{updated});
           if ($cdate < $updated) {
+#            say "… We're newer, putting us in our place.";
             splice(@{$cache}, $i, 0, $pagedef);
+            $ccount++;
             $added = 1;
           }
         }
       }
     }
   }
+
+#  say "… We got past index placement searches";
+
   ## If all else fails, fallback to default behaviour.
   if (!$added) {
+#    say "» Apparently the page wasn't found, adding it now.";
     if ($story) {
+#      say "… to the end of the list.";
       push(@{$cache}, $pagedef);
     }
     else {
+#      say "… to the beginning of the list.";
       unshift(@{$cache}, $pagedef);
     }
   }
 
   $self->save_cache($cachefile, $cache);
 
+#  say "… We got past cache saving";
+
   ## Queue up the story/index for building.
   if ($story) {
+    say " … adding story build request for '$story'.";
     $self->add_story($cache, $story);
   }
   else {
+    print " … adding index build request for ";
+    if ($tag) { say "tag: '$tag'."; }
+    else { say "site."; }
     $self->add_index($cache, $tag);
   }
+
+#  say "We got to the end of add_to_list";
 
 }
 
 sub build_index {
   my ($self, $page, $index, $tag, $pagelimit) = @_;
+  print "» Building index page $page ";
+  if ($tag) { say "for tag '$tag'."; }
+  else      { say "for site." }
   my $perpage;
   if ($pagelimit) { $perpage = $pagelimit; }
   elsif (exists $self->conf->{indexes}->{perpage}) {
@@ -458,6 +547,7 @@ sub build_index {
     };
     push(@pager, $pagerdef);
   }
+  my $size = @{$index};
   my $pagedef = {
     'type' => 'index',
     'data' => {
@@ -465,7 +555,7 @@ sub build_index {
       'current'  => $page,
       'pager'    => \@pager,
       'items'    => $index,
-      'size'     => @{$index},
+      'size'     => $size,
       'tag'      => $tag,
     },
   };
@@ -481,6 +571,7 @@ sub build_index {
 
 sub build_story {
   my ($self, $index, $page) = @_;
+  say "» Building story $page";
   my $story = $self->get_page($page);
   $story->{type} = 'story';
   $story->{data}->{items} = $index;
@@ -497,12 +588,15 @@ sub get_page {
   my $parser = XML::LibXML->new();
   my $xml = $parser->parse_file($file);
   my $metadata = {};
-  my $node = $xml->getElementById('metadata');
-  my $nodetext = $node->textContent;
-  if ($nodetext) {
-    $metadata = decode_json($nodetext);
+  #my $node = $xml->getElementById('metadata');
+  my $node = getById($xml, 'metadata');
+  if (defined $node) {
+    my $nodetext = $node->textContent;
+    if ($nodetext) {
+      $metadata = decode_json($nodetext);
+    }
+    $node->unbindNode();
   }
-  $node->unbindNode();
   my $page = {
     'file'   => $file,
     'xml'    => $xml,
@@ -534,7 +628,7 @@ sub parse_page {
   ## make "page/content" into the XML node(s), if this is a page.
   if (exists $page->{xml}) {
     ## Because of our modifications to Template::TAL, we can do this:
-    $metadata->{content} = $page->{xml};
+    $metadata->{content} = $page->{xml}->cloneNode(1); # deep clone.
   }
 
   my $template = $self->conf->{templates}->{$type};
@@ -551,6 +645,13 @@ sub parse_page {
   };
 
   my $pagecontent = $self->tal->process($template, $parsedata);
+  ## Now we work around stupid fucking bugs which mean we can't
+  ## put &copy; in a document, nor use © as the first gets 'expanded'
+  ## and the second one gets corrupted. God Perl 5 has some issues.
+  $pagecontent =~ s/\+\+(\w+)\+\+/&$1;/gsm;
+  ## And finally, strip away all those stupid xmlns: tags which are
+  ## now referencing stuff the webpage will never use.
+  $pagecontent =~ s/\s*xmlns\:\w+=".*?"//g;
   return $pagecontent;
 }
 

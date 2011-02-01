@@ -1,4 +1,6 @@
-<page note="the top level element will be stripped">
+<page note="the top level element will be stripped"
+  xmlns:ref="http://xml.huri.net/namespaces/refs"
+>
 <p>
 There's not much on here yet. I will use this as an example of how the
 Reference plugin works though. If you want references, we got references.
