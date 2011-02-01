@@ -76,15 +76,13 @@ sub input_format {
   return $self;
 }
 
-=item get_template( name )
+=item find_template( name )
 
-searches the include path for files of the given name, and returns the first
-found as a Template::TAL::Template object. Will die if it can't find a
-template file with the given name or is unable to open the named file.
+searches the include path and returns the first matching file.
 
 =cut
 
-sub get_template {
+sub find_template {
   my ($self, $name) = @_;
   for my $path (@{ $self->include_path }) {
     my $filename = catfile( $path, $name );
@@ -94,16 +92,34 @@ sub get_template {
       croak("not loading $filename from outside include path")
         unless $abs =~ /^\Q$path/;
      
-      my $template = Template::TAL::Template->new;
-      if (uc($self->input_format) eq 'HTML') {
-        return $template->html_filename( $filename );
-      }
-      else {
-        return $template->filename( $filename );
-      }
+      return $filename;
+
     }
   }
   croak("no template '$name' found");
+
+}
+
+=item get_template( name )
+
+searches the include path for files of the given name, and returns the first
+found as a Template::TAL::Template object. Will die if it can't find a
+template file with the given name or is unable to open the named file.
+
+Now uses the find_template method to locate the file.
+
+=cut
+
+sub get_template {
+  my ($self, $name) = @_;
+  my $filename = $self->find_template($name);
+  my $template = Template::TAL::Template->new;
+  if (uc($self->input_format) eq 'HTML') {
+    return $template->html_filename( $filename );
+  }
+  else {
+    return $template->filename( $filename );
+  }
 }
 
 =back

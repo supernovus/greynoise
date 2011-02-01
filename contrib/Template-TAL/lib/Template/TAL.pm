@@ -250,9 +250,12 @@ sub process {
 sub _process_node {
   my ($self, $node, $local_context, $global_context, $filters, $lid) = @_;
 
+#  print "We're here with a lid: $lid\n" if $lid;
   # we only care about handling elements - text nodes, etc, don't have
   # attributes and therefore can't be munged.
   return unless $node->nodeType == 1;
+
+#  print "And we made it past nodeType check\n" if $lid;
 
   # a mapping of namespaces->plugin class for fast lookup later.
   my %namespaces = map { $_->namespace => $_ } grep { $_->namespace } @{ $self->languages };
@@ -288,7 +291,9 @@ sub _process_node {
     # only process if the language is referenced.
     next unless $language->namespace and exists $attrs{ $language->namespace };
     if ($filters) {
+#      print "Checking for filters on '".$language->namespace."'\n";
       next unless exists $filters->{$language->namespace};
+#      print "We must have had one, we're still here.\n";
     }
 
     # the languages have an ordered list of tag types they want to deal with.
@@ -352,7 +357,7 @@ sub _process_node {
   # which case we assume that it's been dealt with.
   unless ($replaced) {
     for my $child ( $node->childNodes() ) {
-      $self->_process_node( $child, $local_context, $global_context );
+      $self->_process_node( $child, $local_context, $global_context, $filters, $lid );
     }
   }
 }

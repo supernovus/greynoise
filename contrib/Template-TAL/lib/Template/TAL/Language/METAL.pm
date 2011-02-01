@@ -24,24 +24,26 @@ sub namespace { 'http://xml.zope.org/namespaces/metal' }
 
 sub tags { qw( define-macro extend-macro use-macro define-slot fill-slot ) }
 
-sub process_define_macro {
+sub process_tag_define_macro {
   my ($self, $parent, $node, $value, $local_context, 
       $global_context, $lid) = @_;
   if (!$lid) { $lid = 'DEFAULT'; }
+#  print "define-macro lid » $lid\n";
   $self->{macros}{$lid}{ $value } = $node;
   #return (); # remove the macro definition node.
   return $node; ## supernovus says, I don't think we should remove node.
 }
 
-sub process_extend_macro {
+sub process_tag_extend_macro {
   my ($self, $parent, $node, $value, $local_context, $global_context) = @_;
   return $node; # don't replace node
 }
 
-sub process_use_macro {
+sub process_tag_use_macro {
   my ($self, $parent, $node, $value, $local_context, 
       $global_context, $lid) = @_;
   if (!$lid) { $lid = 'DEFAULT'; }
+#  print "localid » $lid\n";
   ## page support added by supernovus, based on my implementation from Flower.
   my $macro;
   if (exists $self->{macros}{$lid}{$value}) {
@@ -49,22 +51,24 @@ sub process_use_macro {
   }
   elsif ($value =~ /#/) {
     my @ns = split(/#/, $value, 2);
+    my $incfile = $ns[0];
     my $section = $ns[1];
-    if (exists $self->{macros}{$ns[0]}{$section}) {
-      $macro = $self->{macros}{$ns[0]}{$section};
+    if (exists $self->{macros}{$incfile}{$section}) {
+      $macro = $self->{macros}{$incfile}{$section};
     }
     else {
-      my $file = $parent->provider->get_template($ns[0]);
+      my $file = $parent->provider->find_template($incfile);
       my $parser = XML::LibXML->new();
       my $include = $parser->parse_file($file);
       if ($include) {
+#        print "» Going to _process_node() on include file\n";
         $parent->_process_node(
           $include->documentElement, $local_context, $global_context,
           { $self->namespace => { 'define-macro' => 1, 'extend-macro' => 1 } },
-          $ns[0]
+          $incfile
         );
-        if (exists $self->{macros}{$ns[0]}{$section}) {
-          $macro = $self->{macros}{$ns[0]}{$section};
+        if (exists $self->{macros}{$incfile}{$section}) {
+          $macro = $self->{macros}{$incfile}{$section};
         }
         else {
           die "include file '$file' did not define macro '$section'.";
@@ -81,12 +85,12 @@ sub process_use_macro {
   return $new;
 }
 
-sub process_define_slot {
+sub process_tag_define_slot {
   my ($self, $parent, $node, $value, $local_context, $global_context) = @_;
   return $node; # don't replace node
 }
 
-sub process_use_slot {
+sub process_tag_use_slot {
   my ($self, $parent, $node, $value, $local_context, $global_context) = @_;
   return $node; # don't replace node
 }
