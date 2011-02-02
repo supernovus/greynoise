@@ -42,6 +42,7 @@ given ($command) {
   when ('--list') {
     my @pages = slurp($build);
     for my $page (@pages) {
+      chomp($page);
       $greynoise->add_page($page);
     }
   }
