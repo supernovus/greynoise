@@ -526,7 +526,7 @@ sub build_index {
   my $to   = ($perpage * $page) - 1;
   if ($to > $size) { $to = $size - 1; }
   my $pages = ceil($size / $perpage);
-  say "Pages: $pages";
+#  say "Pages: $pages";
   my @items = @{$index}[ $from .. $to ];
   my @pager;
   for my $pagecount ( 1 .. $pages ) {
