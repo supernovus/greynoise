@@ -434,48 +434,39 @@ sub add_to_list {
   if ($ccount > 0) {
     for (my $i=0; $i < $ccount; $i++) {
 #      say "on count: $i";
-#      dump_obj("cache[$i]", $cache->[$i]);
       if ($cache->[$i] && $cache->[$i]->{link} eq $pagelink) {
-#        say "» Found our old entry!";
-        if ($story) {
-#          say "… replacing it.";
-          splice(@{$cache}, $i, 1, $pagedef);
-          $added = 1;
-          last;
-        }
-        else {
-#          say "… removing it.";
-          splice(@{$cache}, $i--, 1);
-        }
+        ## Kill the soup!
+        splice(@{$cache}, $i--, 1);
+        $ccount--; ## We're smaller now.
       }
       elsif ($smartlist) {
-#        say "» Searching for the right placement.";
-        if (
-          $story
-          && !$added
-          && $cache->[$i]
-          && exists $cache->[$i]->{chapter}
-          && exists $pagedef->{chapter}
-          && $cache->[$i]->{chapter} > $pagedef->{chapter}
-        ) {
-#          say "… we're a chapter, stick us in place.";
-          splice(@{$cache}, $i, 0, $pagedef);
-          $ccount++;
-          $added = 1;
-        }
-        elsif (
-          !$story
-          && !$added
-          && $cache->[$i]
-          && exists $cache->[$i]->{updated}
-        ) {
-#          say "… finding the date to put us in.";
-          my $cdate = $self->get_datetime($cache->[$i]->{updated});
-          if ($cdate < $updated) {
-#            say "… We're newer, putting us in our place.";
-            splice(@{$cache}, $i, 0, $pagedef);
-            $ccount++;
-            $added = 1;
+        if (!$added) {
+          if ($story) {
+            if (
+              $cache->[$i]
+              && exists $cache->[$i]->{chapter}
+              && exists $pagedef->{chapter}
+              && $cache->[$i]->{chapter} > $pagedef->{chapter}
+            ) {
+#            say "… we're a chapter, stick us in place.";
+              splice(@{$cache}, $i, 0, $pagedef);
+              $ccount++;
+              $added = 1;
+            }
+          }
+          elsif (
+            $cache->[$i]
+            && exists $cache->[$i]->{updated}
+          ) {
+#           say "… finding the date to put us in.";
+            my $cdate = $self->get_datetime($cache->[$i]->{updated});
+            say "Comparing $updated and $cdate";
+            if ($cdate < $updated) {
+              say "$updated is newer than $cdate";
+              splice(@{$cache}, $i, 0, $pagedef);
+              $ccount++;
+              $added = 1;
+            }
           }
         }
       }
@@ -487,7 +478,7 @@ sub add_to_list {
   ## If all else fails, fallback to default behaviour.
   if (!$added) {
 #    say "» Apparently the page wasn't found, adding it now.";
-    if ($story) {
+    if ($smartlist || $story) {
 #      say "… to the end of the list.";
       push(@{$cache}, $pagedef);
     }
@@ -530,10 +521,12 @@ sub build_index {
   else {
     $perpage = 10;
   }
+  my $size = @{$index};
   my $from = ($perpage * $page) - $perpage;
   my $to   = ($perpage * $page) - 1;
-  if ($to > @{$index}) { $to = @{$index}; }
-  my $pages = ceil(@{$index} / $perpage);
+  if ($to > $size) { $to = $size - 1; }
+  my $pages = ceil($size / $perpage);
+  say "Pages: $pages";
   my @items = @{$index}[ $from .. $to ];
   my @pager;
   for my $pagecount ( 1 .. $pages ) {
@@ -547,14 +540,13 @@ sub build_index {
     };
     push(@pager, $pagerdef);
   }
-  my $size = @{$index};
   my $pagedef = {
     'type' => 'index',
     'data' => {
       'count'    => $pages,
       'current'  => $page,
       'pager'    => \@pager,
-      'items'    => $index,
+      'items'    => \@items,
       'size'     => $size,
       'tag'      => $tag,
     },
@@ -564,7 +556,7 @@ sub build_index {
   my $outfile = $self->conf->{output} . $self->index_path($page, $tag);
   $self->output_file($outfile, $content);
 
-  if ($to < @{$index}) {
+  if ($to < $size-1) {
     $self->build_index($page+1, $index, $tag, $perpage);
   }
 }
