@@ -540,6 +540,16 @@ sub build_index {
     };
     push(@pager, $pagerdef);
   }
+  my $title;
+  if ($tag) {
+    $title = $tag;
+  }
+  elsif (exists $self->conf->{site}->{title}) {
+    $title = $self->conf->{site}->{title};
+  }
+  else {
+    $title = "Site Index";
+  }
   my $pagedef = {
     'type' => 'index',
     'data' => {
@@ -549,6 +559,7 @@ sub build_index {
       'items'    => \@items,
       'size'     => $size,
       'tag'      => $tag,
+      'title'    => $title,
     },
   };
 
