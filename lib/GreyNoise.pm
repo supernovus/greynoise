@@ -652,6 +652,7 @@ sub parse_page {
   ## put &copy; in a document, nor use © as the first gets 'expanded'
   ## and the second one gets corrupted. God Perl 5 has some issues.
   $pagecontent =~ s/\+\+(\w+)\+\+/&$1;/gsm;
+  $pagecontent =~ s/\+\+(#\d+)\+\+/&$1;/gsm;
   ## And finally, strip away all those stupid xmlns: tags which are
   ## now referencing stuff the webpage will never use.
   $pagecontent =~ s/\s*xmlns\:\w+=".*?"//g;
