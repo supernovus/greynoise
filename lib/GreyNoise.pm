@@ -460,9 +460,9 @@ sub add_to_list {
           ) {
 #           say "… finding the date to put us in.";
             my $cdate = $self->get_datetime($cache->[$i]->{updated});
-            say "Comparing $updated and $cdate";
+#            say "Comparing $updated and $cdate";
             if ($cdate < $updated) {
-              say "$updated is newer than $cdate";
+#              say "$updated is newer than $cdate";
               splice(@{$cache}, $i, 0, $pagedef);
               $ccount++;
               $added = 1;

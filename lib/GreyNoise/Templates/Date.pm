@@ -23,8 +23,8 @@ sub process_tales_strftime {
 
   my ($format, $lookup) = $string =~ /^'(.*?)'\s+(.*)$/;
 
-  #say "format» $format";
-  #say "lookup» $lookup";
+#  say "format» $format";
+#  say "lookup» $lookup";
 
   my $greynoise;
   if (exists $contexts->[1]->{'-app'}) {
@@ -33,7 +33,9 @@ sub process_tales_strftime {
   
   my $datetime = 
     Template::TAL::ValueParser->value($lookup, $contexts, $plugins);
-  
+ 
+#  say "datetime » $datetime";
+
   if (ref($datetime) ne 'DateTime') {
     if (defined $greynoise && $greynoise->can('get_datetime')) {
       $datetime = $greynoise->get_datetime($datetime);
