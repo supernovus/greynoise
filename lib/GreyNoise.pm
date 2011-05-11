@@ -648,9 +648,12 @@ sub parse_page {
   };
 
   my $pagecontent = $self->tal->process($template, $parsedata);
+
   ## Now we work around stupid fucking bugs which mean we can't
   ## put &copy; in a document, nor use © as the first gets 'expanded'
   ## and the second one gets corrupted. God Perl 5 has some issues.
+  ## Also support for a magic +TAB+ item.
+  $pagecontent =~ s/\+TAB\+/&nbsp;&nbsp;&nbsp;&nbsp;/gsm;
   $pagecontent =~ s/\+\+(\w+)\+\+/&$1;/gsm;
   $pagecontent =~ s/\+\+(#\d+)\+\+/&$1;/gsm;
   ## And finally, strip away all those stupid xmlns: tags which are
